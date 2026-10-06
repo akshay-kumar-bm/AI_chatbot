@@ -1,37 +1,38 @@
-# Customer Support Agent Tutorial Episode 5
+# Customer Support Agent Chatbot (LangGraph + Groq + ChromaDB)
 
-In this final part of the tutorial series, we added on customer and order management to complete the proof of concept chatbot. Customers can now:
+A tool-calling customer-support agent for an online store (the code calls it an elastic-products / flower-shop store). It answers FAQs, recommends products, looks up and places orders, and emails confirmations. Based on a customer-support-agent tutorial series (the original README is "Episode 5") and extended with MongoDB chat history.
 
-- View existing orders
-- Create new orders and update the relevant 'databases'
+## Features
+- LangGraph agent loop (`agent` node, conditional edge to a `ToolNode`, back to `agent`) with state `messages` + `user_id`.
+- LLM: Groq (`llama-3.1-70b-versatile`) via `langchain-groq`, bound to 7 tools.
+- Tools (`tools.py`): `query_knowledge_base` (FAQ RAG), `search_for_product_reccommendations` (inventory RAG), `data_protection_check`, `create_new_customer`, `retrieve_existing_customer_orders`, `place_order`, `send_order_confirmation_email` (Gmail SMTP).
+- Vector search: ChromaDB `PersistentClient` with two collections (FAQ, inventory) using a HuggingFace embedding model through llama-index; data loaded from `FAQ.json` and `inventory.json`.
+- Per-user chat history stored in MongoDB (`chat_history_db.chat_histories`), trimmed to the last 5 messages before each LLM call.
+- Streamlit chat frontend (`streamlit_frontend.py`).
+- `chatbot_juptier.ipynb`: notebook prototype.
 
-Take a look at the bottom half of the below diagram to see what we will build:
-
-![Blank diagram (15)](https://github.com/user-attachments/assets/62305fcb-3414-41a2-9e2d-8f306219ccc0)
-
-Here is what one of the final customer journeys look like:
-
-![image](https://github.com/user-attachments/assets/8230d153-22d4-422d-9746-afbeda7ba69c)
-
+## Structure
+```
+chatbot.py            # LangGraph agent, Mongo history
+tools.py              # tool definitions
+vector_store.py       # Chroma collections, embeddings
+streamlit_frontend.py # UI
+FAQ.json, inventory.json
+chatbot_juptier.ipynb
+requirments.txt
+.chroma_db/           # committed vector DB (~3.7 MB)
+```
 
 ## Setup
-
-To setup the python environment I did:
-
-```bash
-conda create -p ./.conda python=3.11
-pip install -r requirements.txt
 ```
-
-Then activated the environment with:
-```bash
-conda activate ./.conda
+pip install -r requirments.txt        # note the filename spelling
 ```
-
-To run the frontend you can type:
-
-```bash
+Environment variables (`.env`): `GROQ_API_KEY`, `MONGODB_URI`, `SENDER_EMAIL`, `SENDER_PASSWORD` (Gmail app password); `OPENAI_API_KEY` is also listed in the file. Run:
+```
 streamlit run streamlit_frontend.py
 ```
 
-Happy Agent Building :D
+## Limitations
+- Customer/order "database" in `tools.py` is a stand-in, not production storage; orders and customer data are simplistic.
+- `requirments.txt` omits some imports (e.g. pymongo, langchain-groq, llama-index core) so it may need extra installs.
+- Groq model id may be deprecated.
